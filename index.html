@@ -6,6 +6,7 @@
     <title>Luminate Online API Console</title>
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/angular-material/1.0.5/angular-material.min.css">
     <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/styles/default.min.css">
     <style>
       md-autocomplete[md-floating-label] md-input-container {
         padding-bottom: 0;
@@ -30,10 +31,10 @@
     <div ng-controller="ConsoleController as c" layout="column" ng-cloak>
       <md-content class="md-padding">
         <h1 class="md-title">
-          Luminate Online API Console (v0.0.2)
+          Luminate Online API Console (v0.0.3)
         </h1>
-        <form ng-submit="c.submit($event)">
-          <md-autocomplete md-floating-label="API Servlet" md-selected-item="c.selectedServletItem" md-no-cache="true" md-search-text="c.servletText" md-selected-item-change="c.selectedServletItemChange(item)" md-items="item in c.queryServlets(c.servletText)" md-item-text="item.display" md-min-length="0" md-select-on-match="true" placeholder="API Servlet" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <form ng-submit="c.submit($event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <md-autocomplete md-floating-label="API Servlet" md-selected-item="c.selectedServletItem" md-no-cache="true" md-search-text="c.servletText" md-selected-item-change="c.selectedServletItemChange(item)" md-items="item in c.queryServlets(c.servletText)" md-item-text="item.display" md-min-length="0" md-select-on-match="true" placeholder="API Servlet">
             <md-item-template>
               <span md-highlight-text="c.servletText" md-highlight-flags="^i">{{item.display}}</span>
             </md-item-template>
@@ -62,6 +63,7 @@
       </md-content>
     </div>
     
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/highlight.min.js"></script>
     <script>
       (function($) {
         'use strict';
@@ -82,7 +84,7 @@
           var self = this;
           
           self.apiRequest = {
-            luminateApiConsole: '0.0.2'
+            luminateApiConsole: '0.0.3'
           };
           
           self.apiRequestLoading = false;
@@ -201,7 +203,7 @@
                     $mdDialog.hide();
                   };
                   
-                  var isJSON = self.apiRequest.response_format === 'json';
+                  var isJSON = self.apiRequest.response_format === 'json' && typeof response.data !== 'string';
                   
                   $scope.apiResponseStatusCode = response.status;
                   
@@ -257,7 +259,12 @@
                           '</md-dialog>', 
                 parent: angular.element(document.body), 
                 clickOutsideToClose: true, 
-                fullscreen: true
+                fullscreen: true, 
+                onComplete: function() {
+                  $('pre').each(function(i, block) {
+                    hljs.highlightBlock(block);
+                  });
+                }
               });
             };
             
