@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>Luminate Online API Console</title>
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/angular-material/1.0.5/angular-material.min.css">
+    <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <style>
+      md-autocomplete[md-floating-label] md-input-container {
+        padding-bottom: 0;
+      }
+    </style>
+    <!--[if lt IE 9]>
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <![endif]-->
+    <!--[if (gte IE 9) | (!IE)]><!-->
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <!--<![endif]-->
+    <!--[if (gt IE 9) | (!IE)]><!-->
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-sanitize.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-animate.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-aria.min.js"></script>
+      <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular-messages.min.js"></script>
+      <script src="//cdnjs.cloudflare.com/ajax/libs/angular-material/1.0.5/angular-material.min.js"></script>
+    <!--<![endif]-->
+  </head>
+  <body>
+    <div ng-controller="ConsoleController as c" layout="column" ng-cloak>
+      <md-content class="md-padding">
+        <h1 class="md-title">
+          Luminate Online API Console (v0.0.1)
+        </h1>
+        <form ng-submit="c.submit($event)">
+          <md-autocomplete md-floating-label="API Servlet" md-selected-item="c.selectedServletItem" md-no-cache="true" md-search-text="c.servletText" md-selected-item-change="c.selectedServletItemChange(item)" md-items="item in c.queryServlets(c.servletText)" md-item-text="item.display" md-min-length="0" md-select-on-match="true" placeholder="API Servlet" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <md-item-template>
+              <span md-highlight-text="c.servletText" md-highlight-flags="^i">{{item.display}}</span>
+            </md-item-template>
+            <md-not-found>
+              No servlets matching "{{c.servletText}}" were found.
+            </md-not-found>
+          </md-autocomplete>
+          <md-autocomplete md-floating-label="method" md-selected-item="c.selectedMethodItem" md-no-cache="true" md-search-text="c.methodText" md-selected-item-change="c.selectedMethodItemChange(item)" md-items="item in c.queryMethods(c.methodText)" md-item-text="item.display" md-min-length="0" md-select-on-match="true" placeholder="method" autocorrect="off" autocapitalize="off" spellcheck="false" ng-hide="!c.selectedServlet">
+            <md-item-template>
+              <span md-highlight-text="c.methodText" md-highlight-flags="^i">{{item.display}}</span>
+            </md-item-template>
+            <md-not-found>
+              No methods matching "{{c.methodText}}" were found.
+            </md-not-found>
+          </md-autocomplete>
+          <md-input-container class="md-block" ng-repeat="param in c.selectedMethodParams">
+            <label>
+              {{ param.name }}
+            </label>
+            <input ng-model="c.apiRequest[param.name]">
+          </md-input-container>
+          <md-button class="md-raised md-primary" type="submit" ng-if="c.selectedMethod" ng-disabled="c.apiRequestLoading">
+            Submit
+          </md-button>
+        </form>
+      </md-content>
+    </div>
+    
+    <script>
+      (function($) {
+        'use strict';
+        
+        var apiConsoleApp = angular.module('apiConsoleApp', [
+          'ngSanitize', 
+          'ngMaterial', 
+          'apiConsoleControllers'
+        ]), 
+        
+        apiConsoleControllers = angular.module('apiConsoleControllers', []);
+        
+        angular.element(document).ready(function() {
+          angular.bootstrap(document, ['apiConsoleApp']);
+        });
+        
+        apiConsoleControllers.controller('ConsoleController', ['$http', '$httpParamSerializerJQLike', '$mdDialog', function($http, $httpParamSerializerJQLike, $mdDialog) {
+          var self = this;
+          
+          self.apiRequest = {
+            luminateApiConsole: '0.0.1'
+          };
+          
+          self.apiRequestLoading = false;
+          
+          self.servlets = loadAllServlets();
+          self.queryServlets = queryServlets;
+          self.selectedServletItemChange = selectedServletItemChange;
+          self.selectedServlet = null;
+          
+          self.methods = [];
+          self.queryMethods = queryMethods;
+          self.selectedMethodItemChange = selectedMethodItemChange;
+          self.selectedMethod = null;
+          self.selectedMethodParams = null;
+          
+          function queryServlets(query) {
+            return query ? self.servlets.filter(createFilterFor(query)) : self.servlets;
+          }
+          
+          function selectedServletItemChange(item) {
+            self.selectedServlet = item && item.value ? item.value : null;
+            
+            self.selectedMethodItem = null;
+            self.methodText = '';
+            self.selectedMethod = null;
+            self.selectedMethodParams = null;
+            
+            if(self.selectedServlet) {
+              loadAllMethods();
+            }
+          }
+          
+          function loadAllServlets() {
+            return ['CRAdvocacyAPI', 'CRConsAPI', 'CRContentAPI', 'CRDonationAPI', 'CRGroupAPI', 'CROrgEventAPI', 'CRRecurringAPI', 'CRSurveyAPI', 'CRTeamraiserAPI'].map(function(servlet) {
+              return {
+                value: servlet, 
+                display: servlet
+              };
+            });
+          }
+          
+          function createFilterFor(query) {
+            var lowercaseQuery = angular.lowercase(query);
+            return function filterFn(servlet) {
+              return servlet.value.toLowerCase().indexOf(lowercaseQuery) > -1;
+            };
+          }
+          
+          function queryMethods(query) {
+            return query ? self.methods.filter(createFilterFor(query)) : self.methods;
+          }
+          
+          function selectedMethodItemChange(item) {
+            self.selectedMethod = item && item.value ? item.value : null;
+            
+            self.selectedMethodParams = null;
+            
+            if(self.selectedMethod && item.params) {
+              self.selectedMethodParams = item.params;
+            }
+          }
+          
+          function loadAllMethods() {
+            var selectedServlet = self.selectedServlet;
+            
+            $http.get('../site/' + selectedServlet + '/application.wadl').then(function(response) {
+              var $methods = $($.parseXML(response.data)).find('application resources resource method'), 
+              methods = [], 
+              methodParams = {};
+              
+              $methods.each(function() {
+                var methodName = $(this).find('param[name="method"]').attr('fixed'), 
+                $params = $(this).find('request param');
+                
+                if(methodName && $params.length > 0) {
+                  methods.push(methodName);
+                  
+                  methodParams[methodName] = [];
+                  $params.each(function() {
+                    var paramName = $(this).attr('name'), 
+                    paramDescription = $(this).find('doc').attr('title');
+                    
+                    methodParams[methodName].push({
+                      name: paramName, 
+                      description: paramDescription
+                    })
+                  });
+                }
+              });
+              
+              methods.sort();
+              
+              if(self.selectedServlet === selectedServlet) {
+                self.methods = methods.map(function(method) {
+                  return {
+                    value: method, 
+                    display: method, 
+                    params: methodParams[method]
+                  }
+                });
+              }
+            });
+          }
+          
+          self.submit = function($event) {
+            $event.preventDefault();
+            
+            self.apiRequestLoading = true;
+            
+            var apiRequestCallback = function(response) {
+              self.apiRequestLoading = false;
+              
+              $mdDialog.show({
+                controller: function($scope, $mdDialog) {
+                  $scope.close = function() {
+                    $mdDialog.hide();
+                  };
+                  
+                  $scope.apiResponse = self.apiRequest.response_format === 'json' ? JSON.stringify(response.data) : response.data;
+                  
+                  $scope.apiResponseStatusCode = response.status;
+                  
+                  $scope.apiResponseStatusText = response.statusText;
+                }, 
+                template: '<md-dialog aria-label="Response" ng-cloak>' + 
+                            '<md-toolbar>' + 
+                              '<div class="md-toolbar-tools">' + 
+                                '<h2>' + 
+                                  'Response' + 
+                                '</h2>' + 
+                                '<span flex></span>' + 
+                                '<md-button class="md-icon-button" ng-click="close()">' + 
+                                  '<md-icon md-font-set="material-icons">close</md-icon>' + 
+                                '</md-button>' + 
+                              '</div>' + 
+                            '</md-toolbar>' + 
+                            '<md-toolbar class="md-warn" ng-if="apiResponseStatusCode && apiResponseStatusCode != \'200\'">' + 
+                              '<div class="md-toolbar-tools">' + 
+                                '<h2 class="md-flex">' + 
+                                  '<span ng-bind="apiResponseStatusCode"></span> ' + 
+                                  '<span ng-bind="apiResponseStatusText"></span>' + 
+                                '</h2>' + 
+                              '</div>' + 
+                            '</md-toolbar>' + 
+                            '<md-dialog-content>' + 
+                              '<div class="md-dialog-content">' + 
+                                '<pre>' + 
+                                  '<code ng-bind="apiResponse"></code>' + 
+                                '</pre>' + 
+                              '</div>' + 
+                            '</md-dialog-content>' + 
+                          '</md-dialog>', 
+                parent: angular.element(document.body), 
+                clickOutsideToClose: true, 
+                fullscreen: true
+              });
+            };
+            
+            $http({
+              url: '../site/' + self.selectedServlet, 
+              method: 'POST', 
+              data: 'method=' + self.selectedMethod + '&' + $httpParamSerializerJQLike(self.apiRequest), 
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              }
+            }).then(apiRequestCallback, apiRequestCallback);
+          };
+        }]);
+      })(jQuery);
+    </script>
+  </body>
+</html>
