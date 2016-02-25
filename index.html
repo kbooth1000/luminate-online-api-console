@@ -30,7 +30,7 @@
     <div ng-controller="ConsoleController as c" layout="column" ng-cloak>
       <md-content class="md-padding">
         <h1 class="md-title">
-          Luminate Online API Console (v0.0.1)
+          Luminate Online API Console (v0.0.2)
         </h1>
         <form ng-submit="c.submit($event)">
           <md-autocomplete md-floating-label="API Servlet" md-selected-item="c.selectedServletItem" md-no-cache="true" md-search-text="c.servletText" md-selected-item-change="c.selectedServletItemChange(item)" md-items="item in c.queryServlets(c.servletText)" md-item-text="item.display" md-min-length="0" md-select-on-match="true" placeholder="API Servlet" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -82,7 +82,7 @@
           var self = this;
           
           self.apiRequest = {
-            luminateApiConsole: '0.0.1'
+            luminateApiConsole: '0.0.2'
           };
           
           self.apiRequestLoading = false;
@@ -201,11 +201,24 @@
                     $mdDialog.hide();
                   };
                   
-                  $scope.apiResponse = self.apiRequest.response_format === 'json' ? JSON.stringify(response.data) : response.data;
+                  var isJSON = self.apiRequest.response_format === 'json';
                   
                   $scope.apiResponseStatusCode = response.status;
                   
                   $scope.apiResponseStatusText = response.statusText;
+                  
+                  if(isJSON) {
+                    $scope.apiResponse = JSON.stringify(response.data);
+                    
+                    $scope.hasErrorResponse = $scope.apiResponse.errorResponse || ($scope.apiResponse.donationResponse && $scope.apiResponse.donationResponse.errors) || $scope.apiResponse.teamraiserErrorResponse;
+                  }
+                  else {
+                    $scope.apiResponse = response.data;
+                    
+                    var $responseXML = $($.parseXML($scope.apiResponse));
+                    
+                    $scope.hasErrorResponse = $responseXML.find('errorResponse, donationResponse errors, teamraiserErrorResponse').length > 0;
+                  }
                 }, 
                 template: '<md-dialog aria-label="Response" ng-cloak>' + 
                             '<md-toolbar>' + 
@@ -224,6 +237,13 @@
                                 '<h2 class="md-flex">' + 
                                   '<span ng-bind="apiResponseStatusCode"></span> ' + 
                                   '<span ng-bind="apiResponseStatusText"></span>' + 
+                                '</h2>' + 
+                              '</div>' + 
+                            '</md-toolbar>' + 
+                            '<md-toolbar class="md-warn" ng-if="(!apiResponseStatusCode || apiResponseStatusCode == \'200\') && hasErrorResponse">' + 
+                              '<div class="md-toolbar-tools">' + 
+                                '<h2 class="md-flex">' + 
+                                  'Error' + 
                                 '</h2>' + 
                               '</div>' + 
                             '</md-toolbar>' + 
