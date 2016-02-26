@@ -11,6 +11,18 @@
       md-autocomplete[md-floating-label] md-input-container {
         padding-bottom: 0;
       }
+      md-dialog {
+        background: #f0f0f0;
+      }
+      md-dialog .md-dialog-content {
+        padding: 0;
+      }
+      md-dialog .md-dialog-content pre, 
+      md-dialog .md-dialog-content pre.hljs {
+        background: inherit;
+        padding: 20px;
+        margin: 0;
+      }
     </style>
     <!--[if lt IE 9]>
       <script src="//ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
@@ -31,7 +43,7 @@
     <div ng-controller="ConsoleController as c" layout="column" ng-cloak>
       <md-content class="md-padding">
         <h1 class="md-title">
-          Luminate Online API Console (v0.0.6)
+          Luminate Online API Console (v0.0.7)
         </h1>
         <form ng-submit="c.submit($event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <md-autocomplete md-floating-label="API Servlet" md-selected-item="c.selectedServletItem" md-no-cache="true" md-search-text="c.servletText" md-selected-item-change="c.selectedServletItemChange(item)" md-items="item in c.queryServlets(c.servletText)" md-item-text="item.display" md-min-length="0" md-select-on-match="true" placeholder="API Servlet">
@@ -84,7 +96,7 @@
           var self = this;
           
           self.apiRequest = {
-            luminateApiConsole: '0.0.6'
+            luminateApiConsole: '0.0.7'
           };
           
           self.apiRequestLoading = false;
@@ -298,12 +310,15 @@
                             '</md-dialog-content>' + 
                           '</md-dialog>', 
                 parent: angular.element(document.body), 
-                clickOutsideToClose: true, 
                 fullscreen: true, 
                 onComplete: function() {
                   $('pre').each(function(i, block) {
                     hljs.highlightBlock(block);
                   });
+                }, 
+                clickOutsideToClose: true, 
+                closeTo: {
+                  left: 1500
                 }
               });
             };
